@@ -2,21 +2,21 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
-/**
- * This is the configuration block to customize your React Native Android app.
- * By default you don't need to apply any configuration, just uncomment the lines you need.
- */
 react {
-    /* Autolinking */
     autolinkLibrariesWithApp()
 }
 
-/**
- * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
- */
 def enableProguardInReleaseBuilds = false
-
 def jscFlavor = 'org.webkit:android-jsc:+'
+
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+def releaseStorePassword = System.getenv("SNAKE_STORE_PASSWORD") ?: keystoreProperties["SNAKE_STORE_PASSWORD"] ?: ""
+def releaseKeyPassword = System.getenv("SNAKE_KEY_PASSWORD") ?: keystoreProperties["SNAKE_KEY_PASSWORD"] ?: ""
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -34,9 +34,9 @@ android {
     signingConfigs {
          release {
             storeFile file("releaseSnakeGameKey.jks")
-            storePassword System.getenv("SNAKE_STORE_PASSWORD") ?: project.findProperty("SNAKE_STORE_PASSWORD") ?: ""
+            storePassword releaseStorePassword
             keyAlias "snakeGameKey"
-            keyPassword System.getenv("SNAKE_KEY_PASSWORD") ?: project.findProperty("SNAKE_KEY_PASSWORD") ?: ""
+            keyPassword releaseKeyPassword
         }
         debug {
             storeFile file('debug.keystore')
