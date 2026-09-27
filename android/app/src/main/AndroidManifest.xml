@@ -7,13 +7,15 @@
       android:roundIcon="@mipmap/ic_launcher_round"
       android:allowBackup="false"
       android:theme="@style/AppTheme"
-      android:supportsRtl="true">
+      android:supportsRtl="true"
+      android:enableOnBackInvokedCallback="true">
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
         android:launchMode="singleTask"
         android:windowSoftInputMode="adjustResize"
-        android:exported="true">
+        android:exported="true"
+        android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode">
         <intent-filter>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
