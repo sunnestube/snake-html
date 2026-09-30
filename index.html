@@ -2,7 +2,8 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1410" />
   <title>Snake</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -15,15 +16,53 @@
         <span>Rekord <strong id="high">0</strong></span>
       </div>
     </header>
+
     <div class="board-wrap">
       <canvas id="board" width="400" height="400" aria-label="Snake Spielfeld"></canvas>
       <div id="overlay" class="overlay">
         <p id="overlay-title">Snake</p>
-        <p id="overlay-text">Pfeiltasten oder WASD. Leertaste startet.</p>
+        <p id="overlay-text">Kante wrappt zur Gegenseite. Wähle Modus und Tempo.</p>
+
+        <div class="setup" id="setup">
+          <div class="group">
+            <span>Modus</span>
+            <div class="chips" id="mode-chips">
+              <button type="button" class="chip active" data-mode="solo">Solo</button>
+              <button type="button" class="chip" data-mode="arena">Arena</button>
+              <button type="button" class="chip" data-mode="auto">Automatik</button>
+            </div>
+          </div>
+          <div class="group">
+            <span>Tempo</span>
+            <div class="chips" id="diff-chips">
+              <button type="button" class="chip" data-diff="easy">Leicht</button>
+              <button type="button" class="chip active" data-diff="normal">Normal</button>
+              <button type="button" class="chip" data-diff="hard">Schwer</button>
+              <button type="button" class="chip" data-diff="turbo">Turbo</button>
+            </div>
+          </div>
+        </div>
+
         <button id="start" type="button">Start</button>
       </div>
     </div>
-    <p class="hint">Futter verlängert die Schlange. Wand oder eigener Schwanz beendet die Runde. P pausiert.</p>
+
+    <ul class="legend" id="legend"></ul>
+
+    <div class="pad" id="pad" aria-label="Steuerung">
+      <button type="button" class="dir" data-dir="up" aria-label="Hoch">▲</button>
+      <div class="pad-mid">
+        <button type="button" class="dir" data-dir="left" aria-label="Links">◀</button>
+        <button type="button" class="pause" id="pause" aria-label="Pause">❚❚</button>
+        <button type="button" class="dir" data-dir="right" aria-label="Rechts">▶</button>
+      </div>
+      <button type="button" class="dir" data-dir="down" aria-label="Runter">▼</button>
+    </div>
+
+    <p class="hint" id="hint">
+      PC: Pfeile oder WASD, Leertaste startet, P pausiert.
+      Handy: Wischen oder Tasten. Über die Kante kommst du vis-à-vis wieder raus.
+    </p>
   </main>
   <script src="js/game.js"></script>
 </body>

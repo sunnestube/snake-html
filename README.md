@@ -1,17 +1,22 @@
 # Snake
 
-Klassisches Snake im Browser. Eine Datei fürs Markup, eine fürs Styling, eine für die Spiellogik.
+Klassisches Snake im Browser, responsive für Handy und Desktop.
 
-## Spielen
+## Regeln
 
-`index.html` im Browser öffnen. Kein Build, keine Abhängigkeiten.
+Über den Rand läuft die Schlange auf der Gegenseite weiter. Tod nur durch Kollision mit sich selbst oder einer anderen Schlange. Futter gibt einen Punkt.
 
-Pfeiltasten oder WASD steuern die Schlange. Leertaste startet und setzt nach einer Pause fort. `P` pausiert. Auf dem Handy geht Wischen über das Spielfeld.
+## Modi
 
-Futter gibt einen Punkt und verlängert die Schlange. Die Runde endet an der Wand oder am eigenen Schwanz. Der Rekord bleibt im `localStorage`.
+- **Solo** — nur du
+- **Arena** — du gegen Anfänger-KI und Meister-KI
+- **Automatik** — vier KIs: Anfänger, Mittel, Profi, Meister. Schwächere raten öfter falsch, stärkere suchen einen Weg zum Futter
 
-## Dateien
+Tempo: Leicht, Normal, Schwer, Turbo.
 
-- `index.html` — Seite und Canvas
-- `css/style.css` — Layout
-- `js/game.js` — Grid, Bewegung, Kollision, Punkte
+## Bedienung
+
+- PC: Pfeiltasten oder WASD, Leertaste startet, P pausiert
+- Handy: Wischen über das Feld oder das Steuerkreuz darunter
+
+`index.html` im Browser öffnen. Kein Build.
