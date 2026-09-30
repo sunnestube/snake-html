@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <h1>Snake</h1>
+      <div class="scores">
+        <span>Punkte <strong id="score">0</strong></span>
+        <span>Rekord <strong id="high">0</strong></span>
+      </div>
+    </header>
+    <div class="board-wrap">
+      <canvas id="board" width="400" height="400" aria-label="Snake Spielfeld"></canvas>
+      <div id="overlay" class="overlay">
+        <p id="overlay-title">Snake</p>
+        <p id="overlay-text">Pfeiltasten oder WASD. Leertaste startet.</p>
+        <button id="start" type="button">Start</button>
+      </div>
+    </div>
+    <p class="hint">Futter verlängert die Schlange. Wand oder eigener Schwanz beendet die Runde. P pausiert.</p>
+  </main>
+  <script src="js/game.js"></script>
+</body>
+</html>
