@@ -26,6 +26,7 @@ const DIFFS = {
   normal: { label: "Normal", tick: 130 },
   hard: { label: "Schwer", tick: 90 },
   turbo: { label: "Turbo", tick: 60 },
+  sim: { label: "Sim", tick: 20 },
 };
 
 const AI_PROFILES = {
@@ -33,9 +34,12 @@ const AI_PROFILES = {
   mid: { name: "Mittel", skill: 0.55, look: 8, color: "#d6b04c", head: "#f3e3a6" },
   good: { name: "Profi", skill: 0.82, look: 14, color: "#c17be0", head: "#e8c6f6" },
   ace: { name: "Meister", skill: 0.97, look: 28, color: "#e07a4d", head: "#f5c2a8" },
+  chaos: { name: "Chaos", skill: 0.1, look: 2, color: "#888", head: "#bbb" },
+  sniper: { name: "Sniper", skill: 0.9, look: 40, color: "#ff6b6b", head: "#ffc9c9" },
 };
 
 const PLAYER = { name: "Du", color: "#7dce6a", head: "#c6f5b8" };
+const PROFILE_KEYS = Object.keys(AI_PROFILES);
 
 let mode = "solo";
 let diff = "normal";
@@ -49,6 +53,7 @@ let loopId = null;
 let tickMs = DIFFS.normal.tick;
 let touchStart = null;
 let tile = 20;
+let simSteps = 1;
 
 highEl.textContent = high;
 
@@ -101,14 +106,15 @@ function placeFood() {
   food = free.length ? free[Math.floor(Math.random() * free.length)] : { x: 0, y: 0 };
 }
 
-function makeSnake(kind, start, dir, profile) {
+function makeSnake(kind, start, dir, profile, id = 0) {
   const body = [start];
   for (let i = 1; i < 3; i += 1) {
     body.push(wrap(start.x - dir.x * i, start.y - dir.y * i));
   }
+  const name = profile.name + (id ? ` ${id}` : "");
   return {
     kind,
-    name: profile.name,
+    name,
     color: profile.color,
     head: profile.head,
     skill: profile.skill || 1,
@@ -125,16 +131,34 @@ function makeSnake(kind, start, dir, profile) {
   };
 }
 
-function layoutSnakes() {
-  const player = makeSnake("player", { x: 4, y: 10 }, { x: 1, y: 0 }, PLAYER);
-  const weak = makeSnake("ai", { x: 15, y: 4 }, { x: -1, y: 0 }, AI_PROFILES.weak);
-  const mid = makeSnake("ai", { x: 15, y: 15 }, { x: 0, y: -1 }, AI_PROFILES.mid);
-  const good = makeSnake("ai", { x: 4, y: 15 }, { x: 0, y: -1 }, AI_PROFILES.good);
-  const ace = makeSnake("ai", { x: 10, y: 3 }, { x: 0, y: 1 }, AI_PROFILES.ace);
+function randomStart() {
+  return {
+    x: Math.floor(Math.random() * COLS),
+    y: Math.floor(Math.random() * ROWS),
+    dir: DIRS[Math.floor(Math.random() * DIRS.length)],
+  };
+}
 
-  if (mode === "solo") return [player];
-  if (mode === "arena") return [player, weak, ace];
-  return [weak, mid, good, ace];
+function layoutSnakes() {
+  const list = [];
+  if (mode === "solo") {
+    list.push(makeSnake("player", { x: 4, y: 10 }, { x: 1, y: 0 }, PLAYER));
+  } else if (mode === "arena") {
+    list.push(makeSnake("player", { x: 4, y: 10 }, { x: 1, y: 0 }, PLAYER));
+    list.push(makeSnake("ai", { x: 15, y: 4 }, { x: -1, y: 0 }, AI_PROFILES.weak, 1));
+    list.push(makeSnake("ai", { x: 10, y: 3 }, { x: 0, y: 1 }, AI_PROFILES.ace, 1));
+    list.push(makeSnake("ai", { x: 15, y: 15 }, { x: 0, y: -1 }, AI_PROFILES.mid, 1));
+  } else {
+    // auto / swarm: viele KIs
+    const count = mode === "swarm" ? 12 : 8;
+    for (let i = 0; i < count; i += 1) {
+      const key = PROFILE_KEYS[i % PROFILE_KEYS.length];
+      const p = AI_PROFILES[key];
+      const s = randomStart();
+      list.push(makeSnake("ai", { x: s.x, y: s.y }, s.dir, p, i + 1));
+    }
+  }
+  return list;
 }
 
 function renderLegend() {
@@ -227,7 +251,7 @@ function think(snake) {
 function stepSnake(snake) {
   if (!snake.alive) {
     snake.respawn -= 1;
-    if (snake.respawn <= 0 && mode === "auto") respawn(snake);
+    if (snake.respawn <= 0 && (mode === "auto" || mode === "swarm")) respawn(snake);
     return;
   }
 
@@ -263,7 +287,13 @@ function stepSnake(snake) {
 
 function respawn(snake) {
   const used = occupied();
-  const spot = wrap(snake.start.x, snake.start.y);
+  let spot = wrap(snake.start.x, snake.start.y);
+  let tries = 0;
+  while (used.has(`${spot.x},${spot.y}`) && tries < 20) {
+    const s = randomStart();
+    spot = { x: s.x, y: s.y };
+    tries += 1;
+  }
   if (used.has(`${spot.x},${spot.y}`)) return;
   snake.body = [
     spot,
@@ -328,17 +358,18 @@ function step() {
     }
   });
   updateLegend();
-  draw();
+  if (diff !== "sim" || Math.random() < 0.3) draw();
 
   const me = playerSnake();
-  if (mode !== "auto" && me && !me.alive) {
+  if (mode !== "auto" && mode !== "swarm" && me && !me.alive) {
     endGame();
   }
 }
 
 function loop() {
   if (!running || paused) return;
-  step();
+  const steps = diff === "sim" ? 4 : 1;
+  for (let i = 0; i < steps; i += 1) step();
   if (running) loopId = setTimeout(loop, tickMs);
 }
 
@@ -370,17 +401,20 @@ function startGame() {
   reset();
   running = true;
   hideOverlay();
-  hintEl.textContent = mode === "auto"
-    ? "Automatik: vier KIs, von schwach bis stark. Über die Kante gehts vis-à-vis weiter."
+  const hint = mode === "swarm"
+    ? "Schwarm: 12 KIs. Sim-Tempo läuft sehr schnell."
+    : mode === "auto"
+    ? "Automatik: 8 KIs. Sim-Tempo für schnelle Simulation."
     : "Über die Kante startest du gegenüber. P oder Pause-Taste hält an.";
+  hintEl.textContent = hint;
   loop();
 }
 
 function endGame() {
   running = false;
   clearTimeout(loopId);
-  const extra = mode === "arena"
-    ? ` KI-Punkte: ${snakes.filter((s) => s.kind === "ai").map((s) => `${s.name} ${s.points}`).join(", ")}.`
+  const extra = (mode === "arena" || mode === "auto" || mode === "swarm")
+    ? ` KI-Punkte: ${snakes.filter((s) => s.kind === "ai").slice(0, 6).map((s) => `${s.name} ${s.points}`).join(", ")}.`
     : "";
   showOverlay("Game Over", `Punkte: ${score}.${extra} Nochmal?`, "Nochmal", true);
 }
@@ -469,7 +503,7 @@ reset();
 resize();
 showOverlay(
   "Snake",
-  "Kante wrappt zur Gegenseite. Solo, Arena gegen KIs oder Automatik mit vier Schlangen.",
+  "Kante wrappt zur Gegenseite. Solo, Arena, Automatik oder Schwarm mit vielen KIs.",
   "Start",
   true
 );
