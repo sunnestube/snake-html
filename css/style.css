@@ -273,3 +273,11 @@ canvas {
     grid-template-columns: 56px 56px 56px;
   }
 }
+
+.legend li.out {
+  opacity: 0.55;
+}
+
+.legend li.out .name {
+  text-decoration: line-through;
+}
