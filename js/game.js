@@ -11,6 +11,7 @@ const legendEl = document.getElementById("legend");
 const hintEl = document.getElementById("hint");
 const pauseBtn = document.getElementById("pause");
 
+const L = globalThis.SnakeLogic;
 const COLS = 20;
 const ROWS = 20;
 const HIGH_KEY = "snake-html-high";
@@ -79,38 +80,20 @@ function opposite(a, b) {
   return a.x === -b.x && a.y === -b.y;
 }
 
-function occupied(exceptTailOf = null) {
-  const cells = new Set();
-  snakes.forEach((snake) => {
-    if (!snake.alive) return;
-    snake.body.forEach((part, i) => {
-      if (exceptTailOf === snake && i === snake.body.length - 1 && !snake.grow) return;
-      cells.add(`${part.x},${part.y}`);
-    });
-  });
-  return cells;
+function occupied(self = null, eatsNow = false) {
+  return L.occupiedFor(snakes, self, eatsNow);
 }
 
-function blockedAt(x, y, skipTailOf) {
-  return occupied(skipTailOf).has(`${x},${y}`);
+function blockedAt(x, y, self) {
+  const eatsNow = !!self && x === food.x && y === food.y;
+  return occupied(self, eatsNow).has(`${x},${y}`);
 }
 
 function placeFood() {
-  const used = occupied();
-  const free = [];
-  for (let y = 0; y < ROWS; y += 1) {
-    for (let x = 0; x < COLS; x += 1) {
-      if (!used.has(`${x},${y}`)) free.push({ x, y });
-    }
-  }
-  food = free.length ? free[Math.floor(Math.random() * free.length)] : { x: 0, y: 0 };
+  food = L.placeFood(snakes, COLS, ROWS, Math.random) || { x: -1, y: -1 };
 }
 
 function makeSnake(kind, start, dir, profile, id = 0) {
-  const body = [start];
-  for (let i = 1; i < 3; i += 1) {
-    body.push(wrap(start.x - dir.x * i, start.y - dir.y * i));
-  }
   const name = profile.name + (id ? ` ${id}` : "");
   return {
     kind,
@@ -119,15 +102,11 @@ function makeSnake(kind, start, dir, profile, id = 0) {
     head: profile.head,
     skill: profile.skill || 1,
     look: profile.look || 20,
-    body,
+    body: L.makeBody(start, dir, COLS, ROWS),
     dir,
     nextDir: { ...dir },
     alive: true,
-    grow: false,
     points: 0,
-    respawn: 0,
-    start,
-    startDir: { ...dir },
   };
 }
 
@@ -161,16 +140,23 @@ function layoutSnakes() {
   return list;
 }
 
+function legendItem(snake, i) {
+  const status = snake.alive
+    ? `<strong>${snake.points}</strong>`
+    : `<strong title="Ausgeschieden">✝ ${snake.body.length}</strong>`;
+  return `<li data-i="${i}" class="${snake.alive ? "" : "out"}"><span class="swatch" style="background:${snake.color}"></span><span class="name">${snake.name}</span> ${status}</li>`;
+}
+
 function renderLegend() {
-  legendEl.innerHTML = snakes.map((snake) => (
-    `<li><span class="swatch" style="background:${snake.color}"></span>${snake.name} <strong data-p="${snake.name}">${snake.points}</strong></li>`
-  )).join("");
+  legendEl.innerHTML = snakes.map(legendItem).join("");
 }
 
 function updateLegend() {
-  snakes.forEach((snake) => {
-    const el = legendEl.querySelector(`[data-p="${snake.name}"]`);
-    if (el) el.textContent = snake.points;
+  snakes.forEach((snake, i) => {
+    const el = legendEl.querySelector(`[data-i="${i}"]`);
+    if (!el) return;
+    const html = legendItem(snake, i);
+    if (el.outerHTML !== html) el.outerHTML = html;
   });
 }
 
@@ -195,7 +181,7 @@ function validMoves(snake) {
 
 function bfsNext(snake, goal, limit) {
   const start = snake.body[0];
-  const blocked = occupied(snake);
+  const blocked = occupied(snake, false);
   const q = [{ x: start.x, y: start.y, first: null, d: 0 }];
   const seen = new Set([`${start.x},${start.y}`]);
   let fallback = null;
@@ -248,62 +234,9 @@ function think(snake) {
   return safestMove(snake, moves);
 }
 
-function stepSnake(snake) {
-  if (!snake.alive) {
-    snake.respawn -= 1;
-    if (snake.respawn <= 0 && (mode === "auto" || mode === "swarm")) respawn(snake);
-    return;
-  }
-
+function chooseDir(snake) {
   if (snake.kind === "ai") snake.nextDir = think(snake);
   if (!opposite(snake.nextDir, snake.dir)) snake.dir = snake.nextDir;
-
-  const head = wrap(snake.body[0].x + snake.dir.x, snake.body[0].y + snake.dir.y);
-  if (blockedAt(head.x, head.y, snake)) {
-    snake.alive = false;
-    snake.respawn = 18;
-    return;
-  }
-
-  snake.body.unshift(head);
-  if (same(head, food)) {
-    snake.grow = true;
-    snake.points += 1;
-    if (snake.kind === "player") {
-      score = snake.points;
-      scoreEl.textContent = String(score);
-      if (score > high) {
-        high = score;
-        highEl.textContent = String(high);
-        localStorage.setItem(HIGH_KEY, String(high));
-      }
-    }
-    placeFood();
-  } else {
-    snake.grow = false;
-    snake.body.pop();
-  }
-}
-
-function respawn(snake) {
-  const used = occupied();
-  let spot = wrap(snake.start.x, snake.start.y);
-  let tries = 0;
-  while (used.has(`${spot.x},${spot.y}`) && tries < 20) {
-    const s = randomStart();
-    spot = { x: s.x, y: s.y };
-    tries += 1;
-  }
-  if (used.has(`${spot.x},${spot.y}`)) return;
-  snake.body = [
-    spot,
-    wrap(spot.x - snake.startDir.x, spot.y - snake.startDir.y),
-    wrap(spot.x - snake.startDir.x * 2, spot.y - snake.startDir.y * 2),
-  ];
-  snake.dir = { ...snake.startDir };
-  snake.nextDir = { ...snake.startDir };
-  snake.alive = true;
-  snake.grow = false;
 }
 
 function resize() {
@@ -347,21 +280,28 @@ function draw() {
 }
 
 function step() {
-  snakes.forEach(stepSnake);
-  const heads = snakes.filter((s) => s.alive).map((s) => s.body[0]);
-  snakes.forEach((snake) => {
-    if (!snake.alive) return;
-    const hits = heads.filter((h) => same(h, snake.body[0])).length;
-    if (hits > 1) {
-      snake.alive = false;
-      snake.respawn = 18;
+  snakes.forEach((snake) => { if (snake.alive) chooseDir(snake); });
+  const state = { snakes, food, cols: COLS, rows: ROWS, rng: Math.random };
+  const { ate } = L.step(state);
+  food = state.food || { x: -1, y: -1 };
+  const me = playerSnake();
+  if (me && ate.includes(me)) {
+    score = me.points;
+    scoreEl.textContent = String(score);
+    if (score > high) {
+      high = score;
+      highEl.textContent = String(high);
+      localStorage.setItem(HIGH_KEY, String(high));
     }
-  });
+  }
   updateLegend();
   if (diff !== "sim" || Math.random() < 0.3) draw();
 
-  const me = playerSnake();
   if (mode !== "auto" && mode !== "swarm" && me && !me.alive) {
+    draw();
+    endGame();
+  } else if (!snakes.some((s) => s.alive)) {
+    draw();
     endGame();
   }
 }

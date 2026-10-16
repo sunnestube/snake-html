@@ -21,3 +21,9 @@ Tempo: Leicht, Normal, Schwer, Turbo, **Sim** (sehr schnell, 4 Steps pro Frame, 
 - Handy: Wischen über das Feld oder das Steuerkreuz darunter
 
 `index.html` im Browser öffnen. Kein Build. Automatisch auf Vercel deployed.
+
+## Wachstum und Ausscheiden
+
+Jedes Futter macht eine Schlange dauerhaft um ein Segment länger (`body.length === 3 + Punkte`). Wer mit Körper oder Kopf an Kopf kollidiert, scheidet aus und steht in der Legende durchgestrichen mit „✝ Länge“. Einen Respawn gibt es nicht mehr. Die Tick-Logik liegt DOM-frei in `js/logic.js`.
+
+Test: `node tests/growth.test.mjs`
