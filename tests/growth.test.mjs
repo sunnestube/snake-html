@@ -1,6 +1,7 @@
 // Deterministischer Test der Wachs-Logik: node tests/growth.test.mjs
 import { createRequire } from "module";
 import assert from "assert/strict";
+import { readFileSync } from "fs";
 const L = createRequire(import.meta.url)("../js/logic.js");
 
 const C = 20, R = 20;
@@ -111,5 +112,91 @@ t("Simulation 12 Schlangen, fester Seed: Invariante in jedem Tick", () => {
     snakes.forEach((s) => { if (s.alive) assert.equal(s.body.length, 3 + s.points); });
   }
 });
+
+// ---- Vorsichtige KI und mehr Futter ----
+t("KI waehlt keinen sofort toedlichen Zug, solange es einen sicheren gibt", () => {
+  // Kopf (5,5) nach rechts, rechts und oben blockiert von einer anderen Schlange
+  const me = { name: "me", body: [{ x: 5, y: 5 }, { x: 4, y: 5 }, { x: 3, y: 5 }], dir: { x: 1, y: 0 }, alive: true, points: 0, skill: 1, look: 20 };
+  const wall = { name: "w", body: [{ x: 6, y: 3 }, { x: 6, y: 4 }, { x: 6, y: 5 }, { x: 6, y: 6 }, { x: 5, y: 4 }], dir: { x: 0, y: 1 }, alive: true, points: 2 };
+  for (let i = 0; i < 20; i += 1) {
+    const d = L.chooseMove([me, wall], me, [{ x: 7, y: 5 }], C, R, rng);
+    assert.deepEqual(d, { x: 0, y: 1 });
+  }
+});
+
+t("KI meidet Sackgassen (Flood-Fill), auch wenn dort Futter liegt", () => {
+  // Tasche oben: (5,4) ist nur 1 Feld gross, Futter liegt darin
+  const me = { name: "me", body: [{ x: 5, y: 5 }, { x: 5, y: 6 }, { x: 5, y: 7 }, { x: 5, y: 8 }], dir: { x: 0, y: -1 }, alive: true, points: 1, skill: 1, look: 20 };
+  const box = { name: "b", body: [{ x: 4, y: 3 }, { x: 5, y: 3 }, { x: 6, y: 3 }, { x: 6, y: 4 }, { x: 4, y: 4 }], dir: { x: 1, y: 0 }, alive: true, points: 2 };
+  for (let i = 0; i < 20; i += 1) {
+    const d = L.chooseMove([me, box], me, [{ x: 5, y: 4 }], C, R, rng);
+    assert.notDeepEqual(d, { x: 0, y: -1 });
+  }
+});
+
+t("KI weicht Kopf-an-Kopf aus, wenn es eine Alternative gibt", () => {
+  const me = snake({ x: 4, y: 10 }, { x: 1, y: 0 }, "me");
+  me.skill = 1; me.look = 20;
+  const other = snake({ x: 6, y: 10 }, { x: -1, y: 0 }, "o");
+  for (let i = 0; i < 20; i += 1) {
+    const d = L.chooseMove([me, other], me, [{ x: 5, y: 10 }], C, R, rng);
+    assert.notDeepEqual(d, { x: 1, y: 0 }, "nicht ins umkaempfte Futterfeld");
+  }
+});
+
+t("Mehr Futter: max(1, ceil(lebende/2)), nichts verloren, nichts doppelt", () => {
+  const list = Array.from({ length: 5 }, (_, i) => snake({ x: 2 + i * 3, y: 5 }, { x: 0, y: 1 }, `m${i}`));
+  const st = { snakes: list, foods: [], cols: C, rows: R, rng };
+  L.fillFoods(st);
+  assert.equal(st.foods.length, 3);
+  assert.equal(new Set(st.foods.map(L.key)).size, 3, "keine doppelten Futterfelder");
+  // zwei Schlangen fressen je ein anderes Futter im selben Tick
+  st.foods = [{ x: 2, y: 6 }, { x: 5, y: 6 }, { x: 15, y: 15 }];
+  const res = L.step(st);
+  assert.equal(res.ate.length, 2);
+  assert.equal(list[0].points + list[1].points, 2);
+  assert.equal(st.foods.length, 3, "aufgefuellt");
+  assert.ok(st.foods.some((f) => L.same(f, { x: 15, y: 15 })), "nicht gefressenes Futter bleibt");
+  list.forEach((s) => assert.equal(s.body.length, 3 + s.points));
+});
+
+// Schwarm wie in js/game.js: 12 KIs, Profile und Tempo aus game.js gelesen.
+const src = readFileSync(new URL("../js/game.js", import.meta.url), "utf8");
+const simTick = Number(/sim:\s*\{[^}]*tick:\s*(\d+)/.exec(src)[1]);
+const simSteps = Number(/diff === "sim" \? (\d+) : 1/.exec(src)[1]);
+const swarmCount = Number(/mode === "swarm" \? (\d+) :/.exec(src)[1]);
+const profiles = [...src.matchAll(/skill:\s*([\d.]+),\s*look:\s*(\d+)/g)].map((m) => ({ skill: Number(m[1]), look: Number(m[2]) }));
+const TICKS = Math.round((60000 / simTick) * simSteps);
+
+function swarmRun(seedValue) {
+  let sv = seedValue;
+  const r = () => ((sv = (sv * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const list = [];
+  for (let i = 0; i < swarmCount; i += 1) {
+    const p = profiles[i % profiles.length];
+    const start = { x: Math.floor(r() * C), y: Math.floor(r() * R) };
+    const dir = L.DIRS[Math.floor(r() * 4)];
+    list.push({ name: `k${i}`, body: L.makeBody(start, dir, C, R), dir, alive: true, points: 0, skill: p.skill, look: p.look });
+  }
+  const st = { snakes: list, foods: [], cols: C, rows: R, rng: r };
+  L.fillFoods(st);
+  for (let tick = 0; tick < TICKS; tick += 1) {
+    list.forEach((s) => { if (s.alive) s.dir = L.chooseMove(list, s, st.foods, C, R, r); });
+    L.step(st);
+    list.forEach((s) => { if (s.alive) assert.equal(s.body.length, 3 + s.points); });
+    assert.equal(new Set(st.foods.map(L.key)).size, st.foods.length);
+  }
+  const alive = list.filter((s) => s.alive);
+  return { alive: alive.length, longest: Math.max(0, ...alive.map((s) => s.body.length)) };
+}
+
+for (const sd of [1, 2, 3, 4, 5, 6]) {
+  t(`Schwarm ${swarmCount} KIs, 60 s Sim = ${TICKS} Ticks, Seed ${sd}: >= 6 leben, laengste >= 15`, () => {
+    const res = swarmRun(sd);
+    console.log(`     Seed ${sd}: ${res.alive} leben, laengste ${res.longest}`);
+    assert.ok(res.alive >= 6, `nur ${res.alive} leben`);
+    assert.ok(res.longest >= 15, `laengste nur ${res.longest}`);
+  });
+}
 
 console.log(`\n${pass} Tests gruen`);
