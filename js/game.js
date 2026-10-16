@@ -33,15 +33,15 @@ const DIFFS = {
 };
 
 const AI_PROFILES = {
-  weak: { name: "Anfänger", skill: 0.22, look: 4, color: "#6aa8e8", head: "#c5ddf6" },
-  mid: { name: "Mittel", skill: 0.55, look: 8, color: "#d6b04c", head: "#f3e3a6" },
-  good: { name: "Profi", skill: 0.82, look: 14, color: "#c17be0", head: "#e8c6f6" },
-  ace: { name: "Meister", skill: 0.97, look: 28, color: "#e07a4d", head: "#f5c2a8" },
-  chaos: { name: "Chaos", skill: 0.1, look: 2, color: "#888", head: "#bbb" },
-  sniper: { name: "Sniper", skill: 0.9, look: 40, color: "#ff6b6b", head: "#ffc9c9" },
+  weak: { name: "Anfänger", skill: 0.22, look: 4, color: "#2b4a7a", head: "#16304f" },
+  mid: { name: "Mittel", skill: 0.55, look: 8, color: "#6b5410", head: "#463600" },
+  good: { name: "Profi", skill: 0.82, look: 14, color: "#5b2b72", head: "#3a1650" },
+  ace: { name: "Meister", skill: 0.97, look: 28, color: "#7a3416", head: "#521f08" },
+  chaos: { name: "Chaos", skill: 0.1, look: 2, color: "#4a4a4a", head: "#2a2a2a" },
+  sniper: { name: "Sniper", skill: 0.9, look: 40, color: "#7a1a1a", head: "#520c0c" },
 };
 
-const PLAYER = { name: "Du", color: "#7dce6a", head: "#c6f5b8" };
+const PLAYER = { name: "Du", color: "#2f3f22", head: "#1f2b16" };   // LCD-Tinte (#3)
 const PROFILE_KEYS = Object.keys(AI_PROFILES);
 
 let mode = "solo";
@@ -56,6 +56,10 @@ let loopId = null;
 let tickMs = DIFFS.normal.tick;
 let input = L.createInput();
 let tile = 20;
+let vibe = localStorage.getItem("snake-html-vibe") !== "0";
+const zoneL = document.getElementById("zone-l");
+const zoneR = document.getElementById("zone-r");
+const vibeBtn = document.getElementById("vibe");
 let offX = 0;
 let offY = 0;
 let landscape = innerWidth > innerHeight;
@@ -202,28 +206,33 @@ function chooseGrid() {
 
 // Canvas füllt die Fläche; das Raster bleibt beim Drehen gleich und wird eingepasst (kein Neustart).
 function resize() {
-  const box = canvas.getBoundingClientRect();
-  const w = Math.max(100, Math.floor(box.width || 400));
-  const h = Math.max(100, Math.floor(box.height || 400));
-  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const w = Math.max(100, Math.floor(boardWrap.clientWidth || 400));
+  const h = Math.max(100, Math.floor(boardWrap.clientHeight || 400));
+  // Scharf (#3): ganzzahlige CSS-Zellen, Backing-Store = CSS-Grösse × devicePixelRatio, Feld mittig.
+  const dpr = window.devicePixelRatio || 1;
+  canvas.style.width = `${w}px`;
+  canvas.style.height = `${h}px`;
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
-  tile = Math.min(canvas.width / COLS, canvas.height / ROWS);
-  offX = (canvas.width - tile * COLS) / 2;
-  offY = (canvas.height - tile * ROWS) / 2;
+  const cssCell = Math.max(1, Math.floor(Math.min(w / COLS, h / ROWS)));
+  tile = Math.round(cssCell * dpr);
+  offX = Math.floor((canvas.width - tile * COLS) / 2);
+  offY = Math.floor((canvas.height - tile * ROWS) / 2);
   draw();
 }
 
 function drawCell(x, y, color) {
-  const g = Math.max(1, tile * 0.08);
+  const g = Math.max(1, Math.round(tile * 0.08));
   ctx.fillStyle = color;
   ctx.fillRect(offX + x * tile + g, offY + y * tile + g, tile - g * 2, tile - g * 2);
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = "#1c261e";
-  ctx.lineWidth = Math.max(1, tile * 0.03);
+  ctx.fillStyle = "#c7d9a4";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#bccf98";
+  ctx.lineWidth = 1;
   const W = tile * COLS, H = tile * ROWS;
   for (let i = 1; i < COLS; i += 1) {
     ctx.beginPath();
@@ -238,7 +247,10 @@ function draw() {
     ctx.stroke();
   }
 
-  foods.forEach((f) => drawCell(f.x, f.y, "#e85d4c"));
+  ctx.strokeStyle = "#1f2b16";
+  ctx.lineWidth = Math.max(1, Math.round(tile * 0.06));
+  ctx.strokeRect(offX + 0.5, offY + 0.5, tile * COLS - 1, tile * ROWS - 1);
+  foods.forEach((f) => drawCell(f.x, f.y, "#5a2a1a"));
   snakes.forEach((snake) => {
     if (!snake.alive) return;
     snake.body.forEach((part, i) => {
@@ -348,7 +360,7 @@ function togglePause() {
   paused = !paused;
   if (paused) {
     clearTimeout(loopId);
-    showOverlay("Pause", "Weiter mit P, Leertaste oder der Pause-Taste.", "Weiter", false);
+    showOverlay("Pause", "Tippe auf Weiter.", "Weiter", false);
   } else {
     hideOverlay();
     loop();
@@ -402,9 +414,35 @@ boardWrap.addEventListener("pointerdown", (event) => {
   if (!running || paused || !overlay.classList.contains("hidden")) return;
   event.preventDefault();
   const box = boardWrap.getBoundingClientRect();
-  nokia(event.clientX - box.left < box.width / 2 ? "7" : "3");
+  const left = event.clientX - box.left < box.width / 2;
+  nokia(left ? "7" : "3");
+  feedback(left ? zoneL : zoneR);
 });
 boardWrap.addEventListener("contextmenu", (event) => event.preventDefault());
+
+// Tipp-Feedback (#3): Hälfte leuchtet 120 ms, optional vibrieren.
+function feedback(zone) {
+  zone.classList.add("flash");
+  setTimeout(() => zone.classList.remove("flash"), 120);
+  if (vibe && navigator.vibrate) {
+    try { navigator.vibrate(10); } catch (e) { /* nicht unterstützt */ }
+  }
+}
+
+function setVibe(on) {
+  vibe = on;
+  localStorage.setItem("snake-html-vibe", on ? "1" : "0");
+  vibeBtn.classList.toggle("active", on);
+  vibeBtn.setAttribute("aria-pressed", String(on));
+  vibeBtn.textContent = on ? "An" : "Aus";
+}
+vibeBtn.addEventListener("click", () => setVibe(!vibe));
+setVibe(vibe);
+
+// App-/Tab-Wechsel (#3): automatisch pausieren, weiter erst mit „Weiter“.
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && running && !paused) togglePause();
+});
 
 // Drehen: Raster bleibt, Feld wird neu eingepasst; laufendes Spiel pausiert.
 function onViewport() {

@@ -31,4 +31,6 @@ KI: Sie wählt keinen sofort tödlichen Zug und meidet Sackgassen mit einem Floo
 
 Futter: In Solo liegt immer 1 Futter, sonst max(1, ceil(lebende/2)) gleichzeitig. Sind 35 % des Felds mit Schlangen belegt (ausgeschiedene zählen mit), kommt kein neues Futter mehr dazu. Sonst läuft das Feld voll und am Ende sterben alle.
 
+Look (#3): Retro-LCD, Pixel-Font VT323 (OFL, `fonts/`), scharfes Canvas, Auto-Pause bei App-Wechsel, Vibration im Startscreen abschaltbar.
+
 Tests: `node tests/input.test.mjs` (Steuerung/Puffer) und `node tests/growth.test.mjs` (dauert rund 3–4 Minuten wegen 6 Schwarm-Simulationen über je 60 s Sim-Tempo = 12000 Ticks)

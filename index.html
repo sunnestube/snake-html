@@ -2,8 +2,8 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f1410" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#c7d9a4" />
   <title>Snake</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/style.css" />
@@ -20,6 +20,8 @@
     </header>
 
     <div class="board-wrap">
+      <div class="zone zone-l" id="zone-l" aria-hidden="true"></div>
+      <div class="zone zone-r" id="zone-r" aria-hidden="true"></div>
       <canvas id="board" width="400" height="400" aria-label="Snake Spielfeld"></canvas>
       <div id="overlay" class="overlay">
         <p id="overlay-title">Snake</p>
@@ -43,6 +45,12 @@
               <button type="button" class="chip" data-diff="hard">Schwer</button>
               <button type="button" class="chip" data-diff="turbo">Turbo</button>
               <button type="button" class="chip" data-diff="sim">Sim</button>
+            </div>
+          </div>
+          <div class="group">
+            <span>Vibration</span>
+            <div class="chips">
+              <button type="button" class="chip active" id="vibe" aria-pressed="true">An</button>
             </div>
           </div>
         </div>
