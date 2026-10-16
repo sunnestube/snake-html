@@ -210,36 +210,13 @@ canvas {
   border-radius: 2px;
 }
 
-.pad {
-  display: none;
-  width: min(240px, 70vw);
-  margin: 0 auto;
-  user-select: none;
-}
-
-.pad.show {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-}
-
-.pad-mid {
-  display: grid;
-  grid-template-columns: 64px 64px 64px;
-  gap: 8px;
-}
-
-.dir, .pause {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
+.pause {
+  width: 36px;
+  height: 32px;
+  border-radius: 8px;
   background: var(--pad);
   color: var(--text);
-  font-size: 22px;
-}
-
-.pause {
-  font-size: 16px;
+  font-size: 13px;
 }
 
 .hint {
@@ -250,27 +227,65 @@ canvas {
   text-align: center;
 }
 
+/* Handy-Vollbild (#2): App-Shell ohne Scrollen, Zoom, Pull-to-refresh und Textauswahl */
 @media (pointer: coarse), (max-width: 720px) {
-  .pad {
-    display: grid;
-    justify-items: center;
-    gap: 8px;
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
-}
 
-@media (max-height: 700px) {
+  body {
+    display: block;
+    background: var(--bg);
+  }
+
   .wrap {
-    min-height: auto;
-    padding-top: 8px;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    gap: 0;
   }
 
-  .dir, .pause {
-    width: 56px;
-    height: 56px;
+  header {
+    flex: 0 0 auto;
+    align-items: center;
+    padding: 6px 10px;
   }
 
-  .pad-mid {
-    grid-template-columns: 56px 56px 56px;
+  h1 {
+    font-size: 18px;
+  }
+
+  .board-wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    touch-action: none;
+  }
+
+  .legend {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+    pointer-events: none;
+    font-size: 11px;
+  }
+
+  .hint {
+    display: none;
   }
 }
 

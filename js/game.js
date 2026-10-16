@@ -10,10 +10,12 @@ const setupEl = document.getElementById("setup");
 const legendEl = document.getElementById("legend");
 const hintEl = document.getElementById("hint");
 const pauseBtn = document.getElementById("pause");
+const boardWrap = document.querySelector(".board-wrap");
 
 const L = globalThis.SnakeLogic;
-const COLS = 20;
-const ROWS = 20;
+let COLS = 20;
+let ROWS = 20;
+const MIN_CELLS = 20;   // kürzere Seite; die längere füllt den Bildschirm (#2)
 const HIGH_KEY = "snake-html-high";
 const DIRS = [
   { x: 1, y: 0 },
@@ -52,8 +54,11 @@ let running = false;
 let paused = false;
 let loopId = null;
 let tickMs = DIFFS.normal.tick;
-let touchStart = null;
+let input = L.createInput();
 let tile = 20;
+let offX = 0;
+let offY = 0;
+let landscape = innerWidth > innerHeight;
 let simSteps = 1;
 
 highEl.textContent = high;
@@ -158,46 +163,78 @@ function playerSnake() {
   return snakes.find((s) => s.kind === "player");
 }
 
+// Absolut (Pfeile/WASD): 180°-Umkehr wird ignoriert. Gepuffert, max. 2 pro Tick.
 function setPlayerDir(x, y) {
   const me = playerSnake();
-  if (!me || !me.alive) return;
-  if (opposite({ x, y }, me.dir)) return;
-  me.nextDir = { x, y };
+  if (!me || !me.alive || !running || paused) return;
+  L.pushDir(input, me.dir, { x, y });
+}
+
+// Nokia (#2): "3"/rechte Hälfte, "7"/linke Hälfte – Achse aus der zuletzt gepufferten Richtung.
+function nokia(k) {
+  const me = playerSnake();
+  if (!me || !me.alive || !running || paused) return false;
+  return L.pushNokia(input, me.dir, k);
 }
 
 function chooseDir(snake) {
+  if (snake.kind === "player") {
+    snake.dir = L.consumeInput(input, snake.dir);
+    return;
+  }
   if (snake.kind === "ai") snake.nextDir = L.chooseMove(snakes, snake, foods, COLS, ROWS, Math.random);
   if (!opposite(snake.nextDir, snake.dir)) snake.dir = snake.nextDir;
 }
 
+function isPhone() {
+  return matchMedia("(pointer: coarse), (max-width: 720px)").matches;
+}
+
+// Raster beim Spielstart: Handy füllt den Bildschirm (kürzere Seite = 20 Felder), Desktop bleibt 20×20.
+function chooseGrid() {
+  const box = boardWrap.getBoundingClientRect();
+  if (!isPhone() || !box.width || !box.height) { COLS = MIN_CELLS; ROWS = MIN_CELLS; return; }
+  const short = Math.min(box.width, box.height);
+  const cell = short / MIN_CELLS;
+  COLS = Math.max(MIN_CELLS, Math.floor(box.width / cell));
+  ROWS = Math.max(MIN_CELLS, Math.floor(box.height / cell));
+}
+
+// Canvas füllt die Fläche; das Raster bleibt beim Drehen gleich und wird eingepasst (kein Neustart).
 function resize() {
   const box = canvas.getBoundingClientRect();
-  const size = Math.max(200, Math.floor(Math.min(box.width, box.height) || 400));
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = size * dpr;
-  canvas.height = size * dpr;
-  tile = (size * dpr) / COLS;
+  const w = Math.max(100, Math.floor(box.width || 400));
+  const h = Math.max(100, Math.floor(box.height || 400));
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  tile = Math.min(canvas.width / COLS, canvas.height / ROWS);
+  offX = (canvas.width - tile * COLS) / 2;
+  offY = (canvas.height - tile * ROWS) / 2;
   draw();
 }
 
 function drawCell(x, y, color) {
   const g = Math.max(1, tile * 0.08);
   ctx.fillStyle = color;
-  ctx.fillRect(x * tile + g, y * tile + g, tile - g * 2, tile - g * 2);
+  ctx.fillRect(offX + x * tile + g, offY + y * tile + g, tile - g * 2, tile - g * 2);
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.strokeStyle = "#1c261e";
   ctx.lineWidth = Math.max(1, tile * 0.03);
+  const W = tile * COLS, H = tile * ROWS;
   for (let i = 1; i < COLS; i += 1) {
     ctx.beginPath();
-    ctx.moveTo(i * tile, 0);
-    ctx.lineTo(i * tile, canvas.height);
+    ctx.moveTo(offX + i * tile, offY);
+    ctx.lineTo(offX + i * tile, offY + H);
     ctx.stroke();
+  }
+  for (let i = 1; i < ROWS; i += 1) {
     ctx.beginPath();
-    ctx.moveTo(0, i * tile);
-    ctx.lineTo(canvas.width, i * tile);
+    ctx.moveTo(offX, offY + i * tile);
+    ctx.lineTo(offX + W, offY + i * tile);
     ctx.stroke();
   }
 
@@ -261,13 +298,29 @@ function reset() {
   score = 0;
   paused = false;
   scoreEl.textContent = "0";
+  input = L.createInput();
+  chooseGrid();
+  resize();
   snakes = layoutSnakes();
   placeFood();
   renderLegend();
   draw();
 }
 
+// Fullscreen-API wo vorhanden (Android Chrome); iOS Safari hat sie nicht → still weiter.
+function tryFullscreen() {
+  if (!isPhone() || document.fullscreenElement) return;
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!req) return;
+  try {
+    const r = req.call(el, { navigationUI: "hide" });
+    if (r && r.catch) r.catch(() => {});
+  } catch (e) { /* nicht erlaubt: ohne Vollbild weiter */ }
+}
+
 function startGame() {
+  tryFullscreen();
   clearTimeout(loopId);
   reset();
   running = true;
@@ -276,7 +329,7 @@ function startGame() {
     ? "Schwarm: 12 KIs. Sim-Tempo läuft sehr schnell."
     : mode === "auto"
     ? "Automatik: 8 KIs. Sim-Tempo für schnelle Simulation."
-    : "Über die Kante startest du gegenüber. P oder Pause-Taste hält an.";
+    : "7 / linke Hälfte, 3 / rechte Hälfte, Pfeile absolut. P pausiert.";
   hintEl.textContent = hint;
   loop();
 }
@@ -318,6 +371,9 @@ document.getElementById("diff-chips").addEventListener("click", (event) => {
 
 document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
+  const code = event.code || "";
+  if (code === "Numpad7" || code === "Digit7" || key === "7") { event.preventDefault(); nokia("7"); return; }
+  if (code === "Numpad3" || code === "Digit3" || key === "3") { event.preventDefault(); nokia("3"); return; }
   const used = ["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "w", "a", "s", "d", "p"];
   if (used.includes(key)) event.preventDefault();
   if (key === "arrowup" || key === "w") setPlayerDir(0, -1);
@@ -341,35 +397,24 @@ pauseBtn.addEventListener("click", () => {
   else togglePause();
 });
 
-document.getElementById("pad").addEventListener("pointerdown", (event) => {
-  const btn = event.target.closest("[data-dir]");
-  if (!btn) return;
+// Touchzonen (#2): linke/rechte Hälfte, sofort bei pointerdown (kein 300-ms-Klick, touch-action: none).
+boardWrap.addEventListener("pointerdown", (event) => {
+  if (!running || paused || !overlay.classList.contains("hidden")) return;
   event.preventDefault();
-  const map = {
-    up: [0, -1],
-    down: [0, 1],
-    left: [-1, 0],
-    right: [1, 0],
-  };
-  const dir = map[btn.dataset.dir];
-  if (dir) setPlayerDir(dir[0], dir[1]);
+  const box = boardWrap.getBoundingClientRect();
+  nokia(event.clientX - box.left < box.width / 2 ? "7" : "3");
 });
+boardWrap.addEventListener("contextmenu", (event) => event.preventDefault());
 
-canvas.addEventListener("pointerdown", (event) => {
-  touchStart = { x: event.clientX, y: event.clientY };
-}, { passive: true });
-
-canvas.addEventListener("pointerup", (event) => {
-  if (!touchStart) return;
-  const dx = event.clientX - touchStart.x;
-  const dy = event.clientY - touchStart.y;
-  touchStart = null;
-  if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;
-  if (Math.abs(dx) > Math.abs(dy)) setPlayerDir(dx > 0 ? 1 : -1, 0);
-  else setPlayerDir(0, dy > 0 ? 1 : -1);
-});
-
-window.addEventListener("resize", resize);
+// Drehen: Raster bleibt, Feld wird neu eingepasst; laufendes Spiel pausiert.
+function onViewport() {
+  const now = innerWidth > innerHeight;
+  if (now !== landscape && running && !paused) togglePause();
+  landscape = now;
+  resize();
+}
+window.addEventListener("resize", onViewport);
+if (window.visualViewport) visualViewport.addEventListener("resize", onViewport);
 reset();
 resize();
 showOverlay(
