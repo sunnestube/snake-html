@@ -56,7 +56,7 @@ let loopId = null;
 let tickMs = DIFFS.normal.tick;
 let input = L.createInput();
 let tile = 20;
-let vibe = localStorage.getItem("snake-html-vibe") !== "0";
+let vibe = localStorage.getItem("snake-html-vibe") === "1";   // #4: Standard aus
 const zoneL = document.getElementById("zone-l");
 const zoneR = document.getElementById("zone-r");
 const vibeBtn = document.getElementById("vibe");
@@ -420,14 +420,32 @@ boardWrap.addEventListener("pointerdown", (event) => {
 });
 boardWrap.addEventListener("contextmenu", (event) => event.preventDefault());
 
-// Tipp-Feedback (#3): Hälfte leuchtet 120 ms, optional vibrieren.
-function feedback(zone) {
-  zone.classList.add("flash");
-  setTimeout(() => zone.classList.remove("flash"), 120);
+// Klickbestätigung (#4): nur am gedrückten Element, LCD-Invert (+1 px eindrücken) für 80 ms.
+// Auslösen bei pointerdown, Zurücksetzen per Timer (nicht pointerup), damit Doppeltipps beide sichtbar sind.
+const PRESS_MS = 80;
+function press(el) {
+  clearTimeout(el._pressT);
+  el.classList.remove("press");
+  void el.offsetWidth;   // Neustart bei schnellem Doppeltipp
+  el.classList.add("press");
+  el._pressT = setTimeout(() => el.classList.remove("press"), PRESS_MS);
+}
+function buzz() {
   if (vibe && navigator.vibrate) {
-    try { navigator.vibrate(10); } catch (e) { /* nicht unterstützt */ }
+    try { navigator.vibrate(15); } catch (e) { /* nicht unterstützt */ }
   }
 }
+// Touchzone: nur die schmale Leiste unten auf der getippten Seite.
+function feedback(zone) {
+  press(zone);
+  buzz();
+}
+document.addEventListener("pointerdown", (event) => {
+  const btn = event.target.closest("button");
+  if (!btn) return;
+  press(btn);
+  buzz();
+});
 
 function setVibe(on) {
   vibe = on;
