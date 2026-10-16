@@ -45,7 +45,7 @@ const PROFILE_KEYS = Object.keys(AI_PROFILES);
 let mode = "solo";
 let diff = "normal";
 let snakes = [];
-let food = { x: 12, y: 10 };
+let foods = [];
 let score = 0;
 let high = Number(localStorage.getItem(HIGH_KEY) || 0);
 let running = false;
@@ -70,27 +70,21 @@ function same(a, b) {
   return a.x === b.x && a.y === b.y;
 }
 
-function distWrap(a, b) {
-  const dx = Math.min(Math.abs(a.x - b.x), COLS - Math.abs(a.x - b.x));
-  const dy = Math.min(Math.abs(a.y - b.y), ROWS - Math.abs(a.y - b.y));
-  return dx + dy;
-}
-
 function opposite(a, b) {
   return a.x === -b.x && a.y === -b.y;
 }
 
-function occupied(self = null, eatsNow = false) {
-  return L.occupiedFor(snakes, self, eatsNow);
-}
-
-function blockedAt(x, y, self) {
-  const eatsNow = !!self && x === food.x && y === food.y;
-  return occupied(self, eatsNow).has(`${x},${y}`);
+// Solo: ein Futter wie bisher; sonst skaliert die Zahl mit den lebenden Schlangen.
+function foodTargetFor(list) {
+  if (mode === "solo") return 1;
+  return L.foodTarget(list, COLS, ROWS);
 }
 
 function placeFood() {
-  food = L.placeFood(snakes, COLS, ROWS, Math.random) || { x: -1, y: -1 };
+  foods = [];
+  const state = { snakes, foods, cols: COLS, rows: ROWS, rng: Math.random, foodTarget: foodTargetFor };
+  L.fillFoods(state);
+  foods = state.foods;
 }
 
 function makeSnake(kind, start, dir, profile, id = 0) {
@@ -171,71 +165,8 @@ function setPlayerDir(x, y) {
   me.nextDir = { x, y };
 }
 
-function validMoves(snake) {
-  return DIRS.filter((dir) => {
-    if (opposite(dir, snake.dir)) return false;
-    const next = wrap(snake.body[0].x + dir.x, snake.body[0].y + dir.y);
-    return !blockedAt(next.x, next.y, snake);
-  });
-}
-
-function bfsNext(snake, goal, limit) {
-  const start = snake.body[0];
-  const blocked = occupied(snake, false);
-  const q = [{ x: start.x, y: start.y, first: null, d: 0 }];
-  const seen = new Set([`${start.x},${start.y}`]);
-  let fallback = null;
-
-  while (q.length) {
-    const cur = q.shift();
-    if (cur.d >= limit) continue;
-    for (const dir of DIRS) {
-      const nx = wrapCoord(cur.x + dir.x, COLS);
-      const ny = wrapCoord(cur.y + dir.y, ROWS);
-      const key = `${nx},${ny}`;
-      if (seen.has(key) || blocked.has(key)) continue;
-      const first = cur.first || dir;
-      if (nx === goal.x && ny === goal.y) return first;
-      seen.add(key);
-      q.push({ x: nx, y: ny, first, d: cur.d + 1 });
-      if (!fallback) fallback = first;
-    }
-  }
-  return fallback;
-}
-
-function safestMove(snake, moves) {
-  let best = moves[0];
-  let bestScore = -Infinity;
-  moves.forEach((dir) => {
-    const next = wrap(snake.body[0].x + dir.x, snake.body[0].y + dir.y);
-    const room = DIRS.filter((d) => {
-      const n2 = wrap(next.x + d.x, next.y + d.y);
-      return !blockedAt(n2.x, n2.y, snake);
-    }).length;
-    const toward = -distWrap(next, food);
-    const scoreMove = room * 3 + toward;
-    if (scoreMove > bestScore) {
-      bestScore = scoreMove;
-      best = dir;
-    }
-  });
-  return best;
-}
-
-function think(snake) {
-  const moves = validMoves(snake);
-  if (!moves.length) return snake.dir;
-  if (Math.random() > snake.skill) {
-    return moves[Math.floor(Math.random() * moves.length)];
-  }
-  const path = bfsNext(snake, food, snake.look);
-  if (path && moves.some((m) => m.x === path.x && m.y === path.y)) return path;
-  return safestMove(snake, moves);
-}
-
 function chooseDir(snake) {
-  if (snake.kind === "ai") snake.nextDir = think(snake);
+  if (snake.kind === "ai") snake.nextDir = L.chooseMove(snakes, snake, foods, COLS, ROWS, Math.random);
   if (!opposite(snake.nextDir, snake.dir)) snake.dir = snake.nextDir;
 }
 
@@ -270,7 +201,7 @@ function draw() {
     ctx.stroke();
   }
 
-  drawCell(food.x, food.y, "#e85d4c");
+  foods.forEach((f) => drawCell(f.x, f.y, "#e85d4c"));
   snakes.forEach((snake) => {
     if (!snake.alive) return;
     snake.body.forEach((part, i) => {
@@ -281,9 +212,9 @@ function draw() {
 
 function step() {
   snakes.forEach((snake) => { if (snake.alive) chooseDir(snake); });
-  const state = { snakes, food, cols: COLS, rows: ROWS, rng: Math.random };
+  const state = { snakes, foods, cols: COLS, rows: ROWS, rng: Math.random, foodTarget: foodTargetFor };
   const { ate } = L.step(state);
-  food = state.food || { x: -1, y: -1 };
+  foods = state.foods;
   const me = playerSnake();
   if (me && ate.includes(me)) {
     score = me.points;
