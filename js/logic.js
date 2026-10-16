@@ -342,7 +342,40 @@
     return top[Math.floor(rng() * top.length)].dir;
   }
 
-  const api = { MAX_FILL, DIRS, wrapCoord, wrap, same, opposite, key, makeBody, nextHead, occupiedFor, placeFood, foodTarget, fillFoods, step, floodArea, timedArea, enemyDistances, headThreats, rateMoves, chooseMove };
+
+  // Nokia-Steuerung (#2): absolut je nach Achse. "3" (rechts): waagrecht → hoch, senkrecht → rechts.
+  // "7" (links): waagrecht → runter, senkrecht → links.
+  const INPUT_MAX = 2;
+  function nokiaDir(base, k) {
+    const horizontal = base.x !== 0;
+    if (k === "3") return horizontal ? { x: 0, y: -1 } : { x: 1, y: 0 };
+    if (k === "7") return horizontal ? { x: 0, y: 1 } : { x: -1, y: 0 };
+    return null;
+  }
+  function createInput() {
+    return { queue: [] };
+  }
+  // Achse der naechsten Eingabe = zuletzt gepufferte Richtung, sonst die aktuelle.
+  function inputBase(buf, current) {
+    return buf.queue.length ? buf.queue[buf.queue.length - 1] : current;
+  }
+  function pushDir(buf, current, d) {
+    if (!d || buf.queue.length >= INPUT_MAX) return false;
+    const base = inputBase(buf, current);
+    if (same(d, base) || opposite(d, base)) return false;   // keine 180°-Umkehr, kein Leer-Eintrag
+    buf.queue.push({ x: d.x, y: d.y });
+    return true;
+  }
+  function pushNokia(buf, current, k) {
+    if (buf.queue.length >= INPUT_MAX) return false;
+    return pushDir(buf, current, nokiaDir(inputBase(buf, current), k));
+  }
+  // Pro Tick genau eine gepufferte Eingabe anwenden.
+  function consumeInput(buf, current) {
+    return buf.queue.length ? buf.queue.shift() : current;
+  }
+
+  const api = { INPUT_MAX, nokiaDir, createInput, pushDir, pushNokia, consumeInput, MAX_FILL, DIRS, wrapCoord, wrap, same, opposite, key, makeBody, nextHead, occupiedFor, placeFood, foodTarget, fillFoods, step, floodArea, timedArea, enemyDistances, headThreats, rateMoves, chooseMove };
   root.SnakeLogic = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
