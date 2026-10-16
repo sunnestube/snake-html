@@ -296,3 +296,91 @@ canvas {
 .legend li.out .name {
   text-decoration: line-through;
 }
+
+/* ---------------------------------------------------------------- Retro-Nokia-Look (#3) */
+@font-face {
+  font-family: "VT323";
+  src: url("../fonts/VT323-Regular.ttf") format("truetype");
+  font-display: swap;
+}
+
+:root {
+  --lcd: #c7d9a4;
+  --lcd-dark: #b4c98c;
+  --ink: #1f2b16;
+  --ink-soft: #3d4f2c;
+  --bg: var(--lcd);
+  --panel: var(--lcd);
+  --text: var(--ink);
+  --muted: var(--ink-soft);
+  --accent: var(--ink);
+  --pad: var(--lcd-dark);
+}
+
+body {
+  background: var(--lcd);
+  color: var(--ink);
+  font-family: "VT323", ui-monospace, monospace;
+  font-size: 20px;
+}
+
+h1 { letter-spacing: 0.12em; }
+.scores { font-size: 20px; color: var(--ink-soft); }
+.scores strong { font-size: 24px; color: var(--ink); }
+
+header {
+  border-bottom: 2px solid var(--ink);
+  min-height: 48px;
+}
+
+.board-wrap { border-color: var(--ink); background: var(--lcd); box-shadow: none; }
+canvas { background: var(--lcd); image-rendering: pixelated; }
+
+.overlay { background: rgba(199, 217, 164, 0.94); gap: 10px; }
+#overlay-text, .group > span, .hint, .legend { color: var(--ink-soft); }
+#overlay-text { font-size: 20px; }
+.group > span { font-size: 18px; }
+
+/* Touch-Buttons ≥ 48×48 px, Abstand ≥ 8 px */
+.chips { gap: 8px; }
+.chip, #start, .pause {
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 20px;
+}
+.chip { background: var(--lcd-dark); color: var(--ink); border: 2px solid var(--ink); }
+.chip.active, #start { background: var(--ink); color: var(--lcd); }
+#start { padding: 8px 28px; margin-top: 8px; }
+.pause { width: 48px; height: 48px; background: var(--lcd-dark); color: var(--ink); border: 2px solid var(--ink); }
+.scores { align-items: center; }
+
+/* Tipp-Feedback: Hälfte leuchtet ≤ 150 ms */
+.zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  pointer-events: none;
+  background: var(--ink);
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.zone-l { left: 0; }
+.zone-r { right: 0; }
+.zone.flash { opacity: 0.14; transition: none; }
+
+.legend li.out { opacity: 0.7; }
+
+/* Querformat / niedrige Höhe: Startscreen kompakt, nichts abgeschnitten */
+.overlay { justify-content: safe center; }
+@media (max-height: 500px) {
+  .overlay { padding: 8px 12px; gap: 6px; }
+  #overlay-title { font-size: 26px; }
+  #overlay-text { display: none; }
+  .setup { width: min(800px, 100%); flex-direction: row; flex-wrap: wrap; gap: 8px 16px; margin: 0; }
+  .group { flex: 1 1 auto; }
+  .chip { flex: 0 1 auto; }
+  #start { margin-top: 0; }
+}
