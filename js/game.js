@@ -9,6 +9,7 @@ const startBtn = document.getElementById("start");
 const setupEl = document.getElementById("setup");
 const legendEl = document.getElementById("legend");
 const hintEl = document.getElementById("hint");
+const HINT_TEXT = hintEl.textContent.trim().replace(/\s+/g, " ");
 const pauseBtn = document.getElementById("pause");
 const boardWrap = document.querySelector(".board-wrap");
 
@@ -52,7 +53,6 @@ let score = 0;
 let high = Number(localStorage.getItem(HIGH_KEY) || 0);
 let running = false;
 let paused = false;
-let loopId = null;
 let tickMs = DIFFS.normal.tick;
 let input = L.createInput();
 let tile = 20;
@@ -286,18 +286,23 @@ function step() {
   }
 }
 
-function loop() {
+function tickOnce() {
   if (!running || paused) return;
   const steps = diff === "sim" ? 4 : 1;
-  for (let i = 0; i < steps; i += 1) step();
-  if (running) loopId = setTimeout(loop, tickMs);
+  for (let i = 0; i < steps && running; i += 1) step();
 }
+// #5: ein einziger Spiel-Timer (Start/Pause/Zurück erzeugen nie einen zweiten).
+const gameLoop = L.createLoop(tickOnce, () => tickMs, {
+  set: (fn, ms) => setTimeout(fn, ms),
+  clear: (id) => clearTimeout(id),
+});
 
-function showOverlay(title, text, button, showSetup) {
+function showOverlay(title, text, button, showSetup, showMenu = false) {
   overlayTitle.textContent = title;
   overlayText.textContent = text;
   startBtn.textContent = button;
   setupEl.classList.toggle("hidden", !showSetup);
+  document.getElementById("menu-btn").hidden = !showMenu;
   overlay.classList.remove("hidden");
 }
 
@@ -333,7 +338,8 @@ function tryFullscreen() {
 
 function startGame() {
   tryFullscreen();
-  clearTimeout(loopId);
+  gameLoop.stop();
+  hideConfirm();
   reset();
   running = true;
   hideOverlay();
@@ -343,29 +349,84 @@ function startGame() {
     ? "Automatik: 8 KIs. Sim-Tempo für schnelle Simulation."
     : "7 / linke Hälfte, 3 / rechte Hälfte, Pfeile absolut. P pausiert.";
   hintEl.textContent = hint;
-  loop();
+  gameLoop.start();
 }
 
 function endGame() {
   running = false;
-  clearTimeout(loopId);
+  gameLoop.stop();
+  saveHigh();
   const extra = (mode === "arena" || mode === "auto" || mode === "swarm")
     ? ` KI-Punkte: ${snakes.filter((s) => s.kind === "ai").slice(0, 6).map((s) => `${s.name} ${s.points}`).join(", ")}.`
     : "";
-  showOverlay("Game Over", `Punkte: ${score}.${extra} Nochmal?`, "Nochmal", true);
+  showOverlay("Game Over", `Punkte: ${score}.${extra} Nochmal?`, "Nochmal", true, true);
+  startBtn.focus({ preventScroll: true });
 }
 
 function togglePause() {
   if (!running) return;
   paused = !paused;
   if (paused) {
-    clearTimeout(loopId);
-    showOverlay("Pause", "Tippe auf Weiter.", "Weiter", false);
+    gameLoop.pause();
+    showOverlay("Pause", "Tippe auf Weiter.", "Weiter", false, true);
+    startBtn.focus({ preventScroll: true });
   } else {
+    hideConfirm();
     hideOverlay();
-    loop();
+    gameLoop.resume();
   }
 }
+
+function saveHigh() {
+  if (score > high) {
+    high = score;
+    highEl.textContent = String(high);
+    localStorage.setItem(HIGH_KEY, String(high));
+  }
+}
+
+// ---------------------------------------------------------------- Zurück zum Startbildschirm (#5)
+const INTRO_TEXT = "Kante wrappt zur Gegenseite. Solo, Arena, Automatik oder Schwarm mit vielen KIs.";
+const confirmEl = document.getElementById("confirm");
+const menuBtn = document.getElementById("menu-btn");
+
+function showStartScreen() {
+  hideConfirm();
+  hintEl.textContent = HINT_TEXT;
+  showOverlay("Snake", INTRO_TEXT, "Start", true, false);
+}
+
+function backToMenu() {
+  saveHigh();             // abgebrochenes Spiel zählt für den Rekord
+  running = false;
+  paused = false;
+  gameLoop.stop();
+  reset();                // Länge, Richtung, Puffer, Score zurück
+  showStartScreen();
+  startBtn.focus({ preventScroll: true });
+}
+
+function showConfirm() {
+  confirmEl.hidden = false;
+  overlay.classList.add("confirming");
+  document.getElementById("confirm-no").focus({ preventScroll: true });
+}
+
+function hideConfirm() {
+  if (confirmEl.hidden) return;
+  confirmEl.hidden = true;
+  overlay.classList.remove("confirming");
+}
+
+menuBtn.addEventListener("click", () => {
+  if (running) showConfirm();   // Spiel noch nicht vorbei → Rückfrage
+  else backToMenu();            // Game Over → direkt
+});
+document.getElementById("confirm-yes").addEventListener("click", backToMenu);
+document.getElementById("confirm-no").addEventListener("click", () => {
+  hideConfirm();
+  menuBtn.focus({ preventScroll: true });
+});
 
 document.getElementById("mode-chips").addEventListener("click", (event) => {
   const btn = event.target.closest("[data-mode]");
@@ -384,6 +445,16 @@ document.getElementById("diff-chips").addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
   const code = event.code || "";
+  // #5: Esc = Pause; in der Rückfrage = Nein. Auf Buttons lösen Enter/Leertaste nur den Button aus.
+  if (key === "escape") {
+    event.preventDefault();
+    if (!confirmEl.hidden) document.getElementById("confirm-no").click();
+    else if (running && !paused) togglePause();
+    return;
+  }
+  if (!confirmEl.hidden) return;   // Rückfrage offen: keine Spieltasten
+  const onButton = event.target && event.target.closest && event.target.closest("button");
+  if (onButton && (key === " " || key === "enter")) return;
   if (code === "Numpad7" || code === "Digit7" || key === "7") { event.preventDefault(); nokia("7"); return; }
   if (code === "Numpad3" || code === "Digit3" || key === "3") { event.preventDefault(); nokia("3"); return; }
   const used = ["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "w", "a", "s", "d", "p"];
@@ -473,9 +544,4 @@ window.addEventListener("resize", onViewport);
 if (window.visualViewport) visualViewport.addEventListener("resize", onViewport);
 reset();
 resize();
-showOverlay(
-  "Snake",
-  "Kante wrappt zur Gegenseite. Solo, Arena, Automatik oder Schwarm mit vielen KIs.",
-  "Start",
-  true
-);
+showStartScreen();

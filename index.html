@@ -58,13 +58,23 @@
         </div>
 
         <button id="start" type="button">Start</button>
+        <button id="menu-btn" type="button" hidden>Startbildschirm</button>
+
+        <div id="confirm" class="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-text" hidden>
+          <p id="confirm-title">Spiel beenden?</p>
+          <p id="confirm-text">Die Punkte zählen für den Rekord.</p>
+          <div class="confirm-buttons">
+            <button id="confirm-yes" type="button">Ja</button>
+            <button id="confirm-no" type="button">Nein</button>
+          </div>
+        </div>
       </div>
     </div>
 
     <ul class="legend" id="legend"></ul>
 
     <p class="hint" id="hint">
-      PC: 7 und 3 (auch Numpad) wie beim Nokia, Pfeile oder WASD absolut, Leertaste startet, P pausiert.
+      PC: 7 und 3 (auch Numpad) wie beim Nokia, Pfeile oder WASD absolut, Leertaste startet, P oder Esc pausiert.
       Handy: linke / rechte Bildschirmhälfte antippen. Über die Kante kommst du vis-à-vis wieder raus.
     </p>
   </main>

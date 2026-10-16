@@ -370,11 +370,11 @@ canvas { background: var(--lcd); image-rendering: pixelated; }
 .zone-l { left: 0; }
 .zone-r { right: 0; }
 .zone.press { opacity: 1; }
-.chip, #start, .pause { transition: none; }
-.chip.press, .pause.press { background: var(--ink); color: var(--lcd); border-color: var(--ink); transform: translateY(1px); }
-.chip.active.press, #start.press { background: var(--lcd); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); transform: translateY(1px); }
+.chip, #start, .pause, #menu-btn, .confirm button { transition: none; }
+.chip.press, .pause.press, #menu-btn.press, #confirm-no.press { background: var(--ink); color: var(--lcd); border-color: var(--ink); transform: translateY(1px); }
+.chip.active.press, #start.press, #confirm-yes.press { background: var(--lcd); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); transform: translateY(1px); }
 @media (prefers-reduced-motion: reduce) {
-  .chip.press, .pause.press, .chip.active.press, #start.press { transform: none; }
+  .chip.press, .pause.press, .chip.active.press, #start.press, #confirm-yes.press { transform: none; }
 }
 
 .legend li.out { opacity: 1; }
@@ -415,3 +415,25 @@ canvas { background: var(--lcd); image-rendering: pixelated; }
 @media (prefers-color-scheme: dark) and ((pointer: coarse) or (max-width: 720px)) {
   .legend li { background: var(--lcd); color: var(--ink-soft); padding: 0 4px; border-radius: 2px; }
 }
+
+/* ---------------------------------------------------------------- Startbildschirm + Rückfrage (#5) */
+#menu-btn, .confirm button {
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 20px;
+  padding: 8px 20px;
+  background: var(--lcd-dark);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+}
+#menu-btn[hidden], .confirm[hidden] { display: none; }
+#confirm-yes { background: var(--ink); color: var(--lcd); }
+.overlay.confirming > :not(#confirm) { display: none; }
+.confirm { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+#confirm-title { margin: 0; font-size: 30px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
+#confirm-text { margin: 0; font-size: 20px; color: var(--ink-soft); }
+.confirm-buttons { display: flex; gap: 12px; margin-top: 6px; }
+.confirm-buttons button { min-width: 96px; }
+.overlay button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }

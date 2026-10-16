@@ -375,7 +375,30 @@
     return buf.queue.length ? buf.queue.shift() : current;
   }
 
-  const api = { INPUT_MAX, nokiaDir, createInput, pushDir, pushNokia, consumeInput, MAX_FILL, DIRS, wrapCoord, wrap, same, opposite, key, makeBody, nextHead, occupiedFor, placeFood, foodTarget, fillFoods, step, floodArea, timedArea, enemyDistances, headThreats, rateMoves, chooseMove };
+  // Spielschleife (#5): genau ein Timer, egal wie oft gestartet, pausiert oder abgebrochen wird.
+  // timers = { set(fn, ms) → id, clear(id) }; tick() darf stop() aufrufen (Game Over).
+  function createLoop(tick, delay, timers) {
+    let id = null;
+    let gen = 0;
+    let state = "idle";
+    const clear = () => { if (id !== null) { timers.clear(id); id = null; } };
+    const run = (g) => {
+      id = null;
+      if (g !== gen || state !== "running") return;
+      tick();
+      if (g === gen && state === "running") id = timers.set(() => run(g), delay());
+    };
+    return {
+      start() { clear(); gen += 1; state = "running"; run(gen); },
+      pause() { if (state !== "running") return; clear(); gen += 1; state = "paused"; },
+      resume() { if (state !== "paused") return; gen += 1; state = "running"; run(gen); },
+      stop() { clear(); gen += 1; state = "idle"; },
+      get state() { return state; },
+      get pending() { return id !== null ? 1 : 0; },
+    };
+  }
+
+  const api = { createLoop, INPUT_MAX, nokiaDir, createInput, pushDir, pushNokia, consumeInput, MAX_FILL, DIRS, wrapCoord, wrap, same, opposite, key, makeBody, nextHead, occupiedFor, placeFood, foodTarget, fillFoods, step, floodArea, timedArea, enemyDistances, headThreats, rateMoves, chooseMove };
   root.SnakeLogic = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
