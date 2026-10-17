@@ -33,11 +33,13 @@ Futter: In Solo liegt immer 1 Futter, sonst max(1, ceil(lebende/2)) gleichzeitig
 
 Look (#3): Retro-LCD, Pixel-Font VT323 (OFL, `fonts/`), scharfes Canvas, Auto-Pause bei App-Wechsel, Vibration im Startscreen abschaltbar.
 
-Tests: `node tests/input.test.mjs` (Steuerung/Puffer) und `node tests/growth.test.mjs` (dauert rund 3–4 Minuten wegen 6 Schwarm-Simulationen über je 60 s Sim-Tempo = 12000 Ticks)
+Tests: `node tests/version.test.mjs` (Versionen HTML/Assets/Service Worker), `node tests/reset.test.mjs` (Reset/Timer), `node tests/input.test.mjs` (Steuerung/Puffer) und `node tests/growth.test.mjs` (dauert rund 3–4 Minuten wegen 6 Schwarm-Simulationen über je 60 s Sim-Tempo = 12000 Ticks)
 
 ## PWA und Android-App (#6)
 
-Die Web-Version ist eine PWA: `manifest.webmanifest` (Vollbild, `orientation: any`, Icons 192/512 und maskable aus dem alten App-Logo), `sw.js` cacht alle Assets inklusive der VT323-Schrift, danach läuft das Spiel offline. Neue Version des Service Workers: `CACHE` in `sw.js` hochzählen.
+Die Web-Version ist eine PWA: `manifest.webmanifest` (Vollbild, `orientation: any`, Icons 192/512 und maskable aus dem alten App-Logo), `sw.js` cacht alle Assets inklusive der VT323-Schrift, danach läuft das Spiel offline. 
+
+**Versionen und Cache:** Die einzige Versionsquelle ist `version.json`. Vor jedem Deploy mit Änderungen an HTML, CSS, JS oder Schrift `node tools/set-version.mjs <neue-version>` ausführen. Das Skript schreibt `?v=<Version>` an alle lokalen Dateien in `index.html` und an die Schrift in `css/style.css` und setzt `CACHE_VERSION` in `sw.js`. Der Service Worker lädt HTML und Manifest zuerst vom Netz (offline aus dem Cache) und Assets zuerst aus dem Cache. Ein neuer Worker aktiviert sich sofort (`skipWaiting`, `clients.claim`) und löscht alle Caches anderer Versionen. `node tests/version.test.mjs` prüft, dass alle Stellen dieselbe Version tragen.
 
 Die Android-App ist eine Trusted Web Activity (Bubblewrap) in `android-twa/` und ersetzt im Play Store die App aus `sunnestube/snake` als Update:
 

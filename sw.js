@@ -1,25 +1,22 @@
-// Service Worker (#6): alle Assets beim Installieren in den Cache, danach offline lauffähig.
-// Neue Version = CACHE hochzählen; alte Caches werden beim Aktivieren gelöscht.
-const CACHE = "snake-v1";
+// Service Worker (#6). Version kommt aus version.json (node tools/set-version.mjs), nie von Hand ändern.
+// Jede Version hat einen eigenen Cache; activate löscht alle anderen. Assets tragen ?v=<Version>.
+const CACHE_VERSION = "1.1.0";
+const CACHE = `snake-${CACHE_VERSION}`;
+const V = `?v=${CACHE_VERSION}`;
+const PAGES = ["/", "/index.html", "/manifest.webmanifest"];
 const ASSETS = [
-  "/",
-  "/index.html",
-  "/css/style.css",
-  "/js/logic.js",
-  "/js/game.js",
-  "/js/pwa.js",
-  "/fonts/VT323-Regular.ttf",
-  "/manifest.webmanifest",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/maskable-192.png",
-  "/icons/maskable-512.png",
-  "/icons/apple-touch-icon.png",
-  "/icons/favicon-32.png",
-];
+  "/css/style.css", "/js/logic.js", "/js/game.js", "/js/pwa.js", "/fonts/VT323-Regular.ttf",
+  "/icons/favicon-32.png", "/icons/apple-touch-icon.png",
+].map((a) => a + V).concat([
+  "/icons/icon-192.png", "/icons/icon-512.png", "/icons/maskable-192.png", "/icons/maskable-512.png",
+]);
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((c) => c.addAll([...PAGES.map((u) => new Request(u, { cache: "reload" })), ...ASSETS.map((u) => new Request(u, { cache: "reload" }))]))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
@@ -30,25 +27,33 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Navigation: Netz zuerst (frische Version), offline die gecachte Startseite.
-// Assets: Cache zuerst, im Hintergrund aktualisieren (stale-while-revalidate).
+const isPage = (req, url) => req.mode === "navigate" || url.pathname === "/" || url.pathname.endsWith(".html") || url.pathname === "/manifest.webmanifest";
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
-  if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
-  if (req.mode === "navigate") {
+  const url = new URL(req.url);
+  if (req.method !== "GET" || url.origin !== self.location.origin) return;
+  if (url.pathname === "/sw.js" || url.pathname.startsWith("/.well-known/")) return;   // immer direkt vom Netz
+
+  // HTML und Manifest: Netz zuerst, offline aus dem Cache.
+  if (isPage(req, url)) {
     event.respondWith(
-      fetch(req)
-        .then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put("/index.html", copy)); return res; })
-        .catch(() => caches.match("/index.html", { ignoreSearch: true }))
+      fetch(req, { cache: "no-store" })
+        .then((res) => {
+          if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req.mode === "navigate" ? "/index.html" : req, copy)); }
+          return res;
+        })
+        .catch(() => caches.open(CACHE).then((c) => c.match(req.mode === "navigate" ? "/index.html" : req, { ignoreSearch: true }))
+          .then((hit) => hit || caches.match("/index.html", { ignoreSearch: true })))
     );
     return;
   }
+
+  // Assets: Cache zuerst (exakte URL inkl. ?v=), sonst Netz und in den aktuellen Cache legen.
   event.respondWith(
-    caches.match(req, { ignoreSearch: true }).then((hit) => {
-      const net = fetch(req)
-        .then((res) => { if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); } return res; })
-        .catch(() => hit);
-      return hit || net;
-    })
+    caches.open(CACHE).then((c) => c.match(req).then((hit) => hit || fetch(req).then((res) => {
+      if (res.ok) c.put(req, res.clone());
+      return res;
+    })))
   );
 });

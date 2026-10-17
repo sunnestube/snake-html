@@ -300,7 +300,7 @@ canvas {
 /* ---------------------------------------------------------------- Retro-Nokia-Look (#3) */
 @font-face {
   font-family: "VT323";
-  src: url("../fonts/VT323-Regular.ttf") format("truetype");
+  src: url("../fonts/VT323-Regular.ttf?v=1.1.0") format("truetype");
   font-display: swap;
 }
 
