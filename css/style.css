@@ -437,3 +437,10 @@ canvas { background: var(--lcd); image-rendering: pixelated; }
 .confirm-buttons { display: flex; gap: 12px; margin-top: 6px; }
 .confirm-buttons button { min-width: 96px; }
 .overlay button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+
+/* ---------------------------------------------------------------- Datenschutz-Link (#6, wie in der alten App) */
+.overlay .privacy {
+  display: inline-flex; align-items: center; min-height: 24px; padding: 2px 6px;
+  font-size: 16px; color: var(--ink); text-decoration: underline; text-underline-offset: 3px;
+}
+.overlay .privacy:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }

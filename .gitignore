@@ -1,0 +1,18 @@
+# Secrets (#6): Keystores und Passwörter nie ins Repo. Lokal nur unter /workspace/secrets/.
+*.jks
+*.keystore
+keystore.properties
+key.properties
+signing.properties
+*.p12
+*.pem
+# Build-Ergebnisse
+*.aab
+*.apk
+*.idsig
+android-twa/.gradle/
+android-twa/build/
+android-twa/app/build/
+android-twa/local.properties
+android-twa/.idea/
+node_modules/

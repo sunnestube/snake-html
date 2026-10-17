@@ -34,3 +34,28 @@ Futter: In Solo liegt immer 1 Futter, sonst max(1, ceil(lebende/2)) gleichzeitig
 Look (#3): Retro-LCD, Pixel-Font VT323 (OFL, `fonts/`), scharfes Canvas, Auto-Pause bei App-Wechsel, Vibration im Startscreen abschaltbar.
 
 Tests: `node tests/input.test.mjs` (Steuerung/Puffer) und `node tests/growth.test.mjs` (dauert rund 3–4 Minuten wegen 6 Schwarm-Simulationen über je 60 s Sim-Tempo = 12000 Ticks)
+
+## PWA und Android-App (#6)
+
+Die Web-Version ist eine PWA: `manifest.webmanifest` (Vollbild, `orientation: any`, Icons 192/512 und maskable aus dem alten App-Logo), `sw.js` cacht alle Assets inklusive der VT323-Schrift, danach läuft das Spiel offline. Neue Version des Service Workers: `CACHE` in `sw.js` hochzählen.
+
+Die Android-App ist eine Trusted Web Activity (Bubblewrap) in `android-twa/` und ersetzt im Play Store die App aus `sunnestube/snake` als Update:
+
+- `applicationId` `li.jueni.snakegame`, `versionCode` 13 (alte App: 12), `versionName` 2.0, `targetSdk` 36, `minSdk` 24
+- Host `snake-html-eight.vercel.app`, Digital Asset Links unter `/.well-known/assetlinks.json`
+- Datenschutzerklärung: https://gitlab.com/Jueni/datenschutz/-/raw/main/README.md (Link auch im Startbildschirm)
+
+### AAB bauen
+
+Voraussetzungen: JDK 17 oder 21, Android SDK mit `platforms;android-36` und `build-tools;36.0.0` (`ANDROID_HOME` gesetzt).
+
+```sh
+cd android-twa
+export SNAKE_SIGNING_PROPERTIES=/workspace/secrets/snake-upload.properties   # Datei ausserhalb des Repos
+./gradlew --no-daemon bundleRelease
+# Ergebnis: app/build/outputs/bundle/release/app-release.aab
+```
+
+Die Properties-Datei enthält `storeFile`, `keyAlias`, `storePassword` und `keyPassword`. In GitHub Actions stattdessen die Secrets als Umgebungsvariablen `SNAKE_STORE_FILE`, `SNAKE_KEY_ALIAS`, `SNAKE_STORE_PASSWORD` und `SNAKE_KEY_PASSWORD` setzen. Keystores, Passwörter, AAB und APK sind in `.gitignore` und gehören nie ins Repo.
+
+Bei jedem Store-Update `versionCode` in `android-twa/app/build.gradle` und `android-twa/twa-manifest.json` erhöhen. Wenn Google Play die App mit Play App Signing signiert, gehört auch der SHA-256 des App-Signaturschlüssels aus der Play Console (Einstellungen → App-Integrität) in `.well-known/assetlinks.json`, sonst zeigt die installierte App eine Browser-Leiste.
