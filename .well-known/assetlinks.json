@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "li.jueni.snakegame",
+      "sha256_cert_fingerprints": [
+        "09:28:3B:85:03:8F:A7:DD:43:4A:E5:2F:D6:46:AD:1C:91:37:18:67:65:7E:9C:CD:89:0D:44:6B:46:0E:12:5F"
+      ]
+    }
+  }
+]

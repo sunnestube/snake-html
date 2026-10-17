@@ -1,0 +1,50 @@
+{
+  "packageId": "li.jueni.snakegame",
+  "host": "snake-html-eight.vercel.app",
+  "name": "Snake",
+  "launcherName": "Snake",
+  "display": "fullscreen",
+  "themeColor": "#C7D9A4",
+  "themeColorDark": "#11170D",
+  "navigationColor": "#C7D9A4",
+  "navigationColorDark": "#11170D",
+  "navigationDividerColor": "#C7D9A4",
+  "navigationDividerColorDark": "#11170D",
+  "backgroundColor": "#C7D9A4",
+  "enableNotifications": false,
+  "startUrl": "/?source=twa",
+  "iconUrl": "https://snake-html-eight.vercel.app/icons/icon-512.png",
+  "maskableIconUrl": "https://snake-html-eight.vercel.app/icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "/workspace/secrets/snake-upload.jks",
+    "alias": "snakegamekey"
+  },
+  "appVersionName": "2.0",
+  "appVersionCode": 13,
+  "shortcuts": [],
+  "generatorApp": "unknown",
+  "webManifestUrl": "https://snake-html-eight.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://snake-html-eight.vercel.app/",
+  "minSdkVersion": 24,
+  "orientation": "any",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [
+    "fullscreen",
+    "standalone"
+  ],
+  "appVersion": "2.0"
+}
