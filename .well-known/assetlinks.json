@@ -7,7 +7,8 @@
       "namespace": "android_app",
       "package_name": "li.jueni.snakegame",
       "sha256_cert_fingerprints": [
-        "09:28:3B:85:03:8F:A7:DD:43:4A:E5:2F:D6:46:AD:1C:91:37:18:67:65:7E:9C:CD:89:0D:44:6B:46:0E:12:5F"
+        "09:28:3B:85:03:8F:A7:DD:43:4A:E5:2F:D6:46:AD:1C:91:37:18:67:65:7E:9C:CD:89:0D:44:6B:46:0E:12:5F",
+        "BB:76:B9:59:B9:71:8B:FE:15:E5:12:F3:8E:33:5E:6C:76:D9:94:EC:90:ED:E3:14:4D:AD:8A:4B:2B:08:9D:F3"
       ]
     }
   }
