@@ -129,10 +129,7 @@
 
             
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            <!-- The LAUNCHER entry lives on the MainActivity alias below (one icon only). -->
 
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
@@ -148,6 +145,23 @@
 
             
         </activity>
+
+        <!-- The previous native app (versionCode <= 12, React Native) started with
+             li.jueni.snakegame.MainActivity. Home-screen shortcuts and launcher
+             caches of existing installs still point to that component; without it
+             tapping the old icon does nothing. The alias keeps it alive and is the
+             single LAUNCHER entry. -->
+        <activity-alias android:name=".MainActivity"
+            android:targetActivity=".LauncherActivity"
+            android:label="@string/launcherName"
+            android:icon="@mipmap/ic_launcher"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
 
         <activity android:name="com.google.androidbrowserhelper.trusted.FocusActivity" />
 
