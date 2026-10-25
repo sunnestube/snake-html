@@ -20,8 +20,8 @@
     "path": "/workspace/secrets/snake-upload.jks",
     "alias": "snakegamekey"
   },
-  "appVersionName": "2.0.1",
-  "appVersionCode": 14,
+  "appVersionName": "2.0.2",
+  "appVersionCode": 15,
   "shortcuts": [],
   "generatorApp": "unknown",
   "webManifestUrl": "https://snake-html-eight.vercel.app/manifest.webmanifest",
@@ -46,5 +46,5 @@
     "fullscreen",
     "standalone"
   ],
-  "appVersion": "2.0.1"
+  "appVersion": "2.0.2"
 }
