@@ -57,8 +57,8 @@ android {
         applicationId "li.jueni.snakegame"
         minSdkVersion 24
         targetSdkVersion 36
-        versionCode 15
-        versionName "2.0.2"
+        versionCode 16
+        versionName "2.0.3"
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -171,7 +171,11 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled true
+            // R8 off (#6): shrinking gains nothing for this thin TWA wrapper and obfuscated library
+            // class names (R.u instead of ManageDataLauncherActivity) only hid the real crash cause.
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (releaseStore) signingConfig signingConfigs.release
         }
     }

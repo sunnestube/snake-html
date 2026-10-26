@@ -163,6 +163,19 @@
         </activity-alias>
 
 
+        <!-- androidbrowserhelper 2.7.4 calls PackageManager.setComponentEnabledSetting() for
+             ManageDataLauncherActivity in LauncherActivity.onCreate (site settings shortcut), but its
+             library manifest does not declare it. Without this entry Android throws
+             IllegalArgumentException "Component class ... does not exist" and the app crashes at
+             startup (#6). Disabled by default (enableSiteSettingsShortcut=false). -->
+        <activity android:name="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
+            android:enabled="@bool/enableSiteSettingsShortcut"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <meta-data android:name="android.support.customtabs.trusted.MANAGE_SPACE_URL"
+                android:value="@string/launchUrl" />
+        </activity>
+
         <activity android:name="com.google.androidbrowserhelper.trusted.FocusActivity" />
 
         <activity android:name="com.google.androidbrowserhelper.trusted.WebViewFallbackActivity"

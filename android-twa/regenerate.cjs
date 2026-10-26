@@ -1,3 +1,4 @@
+// NOTE (vc16): also re-add the ManageDataLauncherActivity <activity> (enabled=@bool/enableSiteSettingsShortcut) to the manifest, androidbrowserhelper 2.7.4 crashes at startup without it; keep minifyEnabled false + proguard-rules.pro.
 // NOTE (vc14): after regenerating, re-apply the MainActivity <activity-alias> and the getCustomTabsCallback() override in LauncherActivity.java (vc15, no QualityEnforcer crash) in app/src/main/AndroidManifest.xml (LAUNCHER entry for the former React Native component, see comment there).
 // Regenerates android-twa/ with @bubblewrap/core 1.27 (run from a folder with `npm i @bubblewrap/core@1.27.0`, local server on :8766 serving the web root).
 // Signing secrets are NOT used here; the keystore path is only a pointer outside the repo.
@@ -10,7 +11,7 @@ const OUT = process.env.TWA_OUT || __dirname;
   const m = TwaManifest.fromWebManifestJson(new URL(`https://${HOST}/manifest.webmanifest`), wm);
   Object.assign(m, {
     packageId: 'li.jueni.snakegame', name: 'Snake', launcherName: 'Snake',
-    appVersionCode: 15, appVersionName: '2.0.2', display: 'fullscreen', orientation: 'any',
+    appVersionCode: 16, appVersionName: '2.0.3', display: 'fullscreen', orientation: 'any',
     themeColor: c('#C7D9A4'), themeColorDark: c('#11170D'), navigationColor: c('#C7D9A4'), navigationColorDark: c('#11170D'),
     navigationDividerColor: c('#C7D9A4'), navigationDividerColorDark: c('#11170D'), backgroundColor: c('#C7D9A4'),
     enableNotifications: false, fallbackType: 'customtabs', startUrl: '/?source=twa',
