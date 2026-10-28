@@ -1,6 +1,6 @@
 // Service Worker (#6). Version kommt aus version.json (node tools/set-version.mjs), nie von Hand ändern.
 // Jede Version hat einen eigenen Cache; activate löscht alle anderen. Assets tragen ?v=<Version>.
-const CACHE_VERSION = "1.1.1";
+const CACHE_VERSION = "1.1.2";
 const CACHE = `snake-${CACHE_VERSION}`;
 const V = `?v=${CACHE_VERSION}`;
 const PAGES = ["/", "/index.html", "/manifest.webmanifest"];

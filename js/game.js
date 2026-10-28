@@ -304,10 +304,12 @@ function showOverlay(title, text, button, showSetup, showMenu = false) {
   setupEl.classList.toggle("hidden", !showSetup);
   document.getElementById("menu-btn").hidden = !showMenu;
   overlay.classList.remove("hidden");
+  syncLeave();
 }
 
 function hideOverlay() {
   overlay.classList.add("hidden");
+  syncLeave();
 }
 
 function reset() {
@@ -324,16 +326,25 @@ function reset() {
   draw();
 }
 
-// Fullscreen-API wo vorhanden (Android Chrome); iOS Safari hat sie nicht → still weiter.
+// Vollbild nur auf dem Handy. Ohne navigationUI:"hide": die Systemleiste bleibt ein zweiter Ausweg.
 function tryFullscreen() {
-  if (!isPhone() || document.fullscreenElement) return;
+  if (!isPhone() || document.fullscreenElement || document.webkitFullscreenElement) return;
   const el = document.documentElement;
   const req = el.requestFullscreen || el.webkitRequestFullscreen;
   if (!req) return;
   try {
-    const r = req.call(el, { navigationUI: "hide" });
+    const r = req.call(el);
     if (r && r.catch) r.catch(() => {});
   } catch (e) { /* nicht erlaubt: ohne Vollbild weiter */ }
+}
+
+function exitFullscreen() {
+  const exit = document.exitFullscreen || document.webkitExitFullscreen;
+  if (!(document.fullscreenElement || document.webkitFullscreenElement) || !exit) return;
+  try {
+    const r = exit.call(document);
+    if (r && r.catch) r.catch(() => {});
+  } catch (e) { /* schon draussen */ }
 }
 
 function startGame() {
@@ -389,6 +400,16 @@ function saveHigh() {
 const INTRO_TEXT = "Kante wrappt zur Gegenseite. Solo, Arena, Automatik oder Schwarm mit vielen KIs.";
 const confirmEl = document.getElementById("confirm");
 const menuBtn = document.getElementById("menu-btn");
+const leaveBtn = document.getElementById("leave");
+let resumeOnCancel = false;
+
+function onStartScreen() {
+  return !running && !paused && !overlay.classList.contains("hidden") && menuBtn.hidden;
+}
+
+function syncLeave() {
+  leaveBtn.hidden = onStartScreen();
+}
 
 function showStartScreen() {
   hideConfirm();
@@ -397,6 +418,8 @@ function showStartScreen() {
 }
 
 function backToMenu() {
+  resumeOnCancel = false;
+  exitFullscreen();
   saveHigh();             // abgebrochenes Spiel zählt für den Rekord
   running = false;
   paused = false;
@@ -408,6 +431,7 @@ function backToMenu() {
 
 function showConfirm() {
   confirmEl.hidden = false;
+  overlay.classList.remove("hidden");
   overlay.classList.add("confirming");
   document.getElementById("confirm-no").focus({ preventScroll: true });
 }
@@ -418,13 +442,38 @@ function hideConfirm() {
   overlay.classList.remove("confirming");
 }
 
+function askLeave() {
+  exitFullscreen();
+  if (!running) {
+    backToMenu();
+    return;
+  }
+  if (!paused) {
+    paused = true;
+    gameLoop.pause();
+    resumeOnCancel = true;
+  } else {
+    resumeOnCancel = false;
+  }
+  showConfirm();
+}
+
 menuBtn.addEventListener("click", () => {
+  resumeOnCancel = false;
   if (running) showConfirm();   // Spiel noch nicht vorbei → Rückfrage
   else backToMenu();            // Game Over → direkt
 });
+leaveBtn.addEventListener("click", askLeave);
 document.getElementById("confirm-yes").addEventListener("click", backToMenu);
 document.getElementById("confirm-no").addEventListener("click", () => {
   hideConfirm();
+  if (resumeOnCancel) {
+    resumeOnCancel = false;
+    paused = false;
+    hideOverlay();
+    gameLoop.resume();
+    return;
+  }
   menuBtn.focus({ preventScroll: true });
 });
 
@@ -449,6 +498,7 @@ document.addEventListener("keydown", (event) => {
   if (key === "escape") {
     event.preventDefault();
     if (!confirmEl.hidden) document.getElementById("confirm-no").click();
+    else if (document.fullscreenElement || document.webkitFullscreenElement) exitFullscreen();
     else if (running && !paused) togglePause();
     return;
   }
